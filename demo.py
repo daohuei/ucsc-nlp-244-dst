@@ -2,8 +2,6 @@
 import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer
 import sys, os
-import json
-from collections import Counter
 import sqlite3
 import ipdb
 import random

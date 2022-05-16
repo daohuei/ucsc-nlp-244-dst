@@ -4,8 +4,6 @@ import simplejson as json
 
 from .nlp import normalize, normalize_mine
 
-import ipdb
-
 digitpat = re.compile('\d+')
 timepat = re.compile("\d{1,2}[:]\d{1,2}")
 pricepat2 = re.compile("\d{1,3}[.]\d{1,2}")

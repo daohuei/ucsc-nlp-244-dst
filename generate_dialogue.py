@@ -6,9 +6,7 @@ from data.dataset.multiwoz import MultiWozDataset
 from evaluate_multiwoz import MultiWozDB
 from utils.multiwoz import dbPointer
 from utils.simpletod import *
-import tqdm
 import json
-import ipdb
 import sys
 import os
 

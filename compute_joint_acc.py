@@ -1,7 +1,5 @@
 import json
 from sklearn.metrics import f1_score, accuracy_score
-import ipdb
-import sys
 import numpy as np
 from utils.Constants import SLOT_VALS
 from utils.dst import ignore_none, default_cleaning, IGNORE_TURNS_TYPE2
