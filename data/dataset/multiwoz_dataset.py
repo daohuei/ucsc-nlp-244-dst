@@ -77,7 +77,7 @@ class HistoryBelief:
                                         self.raw_text)
         if n_subs == 1:
             # if we are dealing with the raw data there is no previous belief state yet
-            self.text_fmt = re.sub('(<\|belief\|>)', r'<|previousbelief|> {previousbelief} <|endofpreviousbelief|> <|belief|>', self.text_fmt)
+            self.text_fmt = re.sub('<\|belief\|>', r'<|previousbelief|> {previousbelief} <|endofpreviousbelief|> <|belief|>', self.text_fmt)
         # also sub context
         self.text_fmt = re.sub(r'<\|context\|>(.*)<\|endofcontext\|>',
                                '<|context|>{context}<|endofcontext|>',
@@ -171,6 +171,6 @@ class MultiWozDataset(datasets.GeneratorBasedBuilder):
                 yield _id, {"text": conversation, "conversation_id": _id}
                 _id += 1
                 conversation = []
-            conversation.append(hb.text)
+            conversation.append(hb.raw_text)
         # return last conversation in queue
         yield _id, {"text": conversation, "conversation_id": _id}
