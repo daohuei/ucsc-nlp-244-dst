@@ -1,6 +1,6 @@
 
 # from .dataset.multiwoz import MultiWozDataset
-from .dataset.data_augmentations import flatten_conversation, mask_delta_beliefs, random_mask_beliefs, mask_context_belief_entities, random_mask_utterance
+from .dataset.data_augmentations import flatten_conversation, insert_previous_belief, mask_delta_beliefs, random_mask_beliefs, mask_context_belief_entities, random_mask_utterance
 
 # def get_dataset(args):
 #     if args.dataset == 'multiwoz':

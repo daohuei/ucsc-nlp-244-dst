@@ -1,7 +1,17 @@
+from more_itertools import pairwise
 import random
 import re
 
 from .multiwoz_dataset import HistoryBelief
+
+
+def insert_previous_belief(data):
+    processed = [HistoryBelief(data['text'][0]).text]
+    for text_1, text_2 in pairwise(data['text']):
+        hb1, hb2 = HistoryBelief(text_1), HistoryBelief(text_2)
+        hb2.prev_belief = hb1.belief
+        processed.append(hb2.text)
+    return {'text': processed}
 
 
 def flatten_conversation(data):
@@ -54,23 +64,13 @@ def mask_context_belief_entities(data):
     return {'masked': hb.text, 'target': data['turn']}
 
 
-def hit_syntax(tokens, idxs):
-    for i in idxs:
-        if tokens[i] == '<|system|>' or tokens[i] == '<|user|>':
-            return True
-    else:
-        return False
-
-
 def random_mask_utterance(data, r):
     hb = HistoryBelief(data['turn'])
     tokens = hb.context.strip().split(' ')
-    content_tokens = list(filter(lambda tok: tok != '<|system|>' and tok != '<|user|>', tokens))
-    n = round(r*len(content_tokens))
-    idxs = [0]
-    while hit_syntax(tokens, idxs):
-        idxs = random.sample(range(len(tokens)), n)
-    for i in idxs:
+    content_idxs = [i for i, tok in enumerate(tokens) if tok != '<|system|>' and tok != '<|user|>']
+    n = round(r*len(content_idxs))
+    mask_idxs = random.sample(content_idxs, n)
+    for i in mask_idxs:
         tokens[i] = 'MASK'
     hb.context = ' '.join(tokens)
     hb.context = ' ' + remove_repeating_masks(hb.context)
