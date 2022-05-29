@@ -59,7 +59,7 @@ def remove_repeating_masks(string):
                             if tok1 == 'MASK' and tok2 == 'MASK']
     for i in repeated_mask_idxs[::-1]:
         del tokens[i]
-    return ' ' + ' '.join(tokens)
+    return ' ' + ' '.join(tokens) + ' '
 
 
 def mask_context_belief_entities(data):
