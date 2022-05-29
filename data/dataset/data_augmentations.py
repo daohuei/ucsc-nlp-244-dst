@@ -43,7 +43,7 @@ def mask_delta_beliefs(data):
 
 def random_mask_beliefs(data, r):
     """randomly masks current belief values at proportion 0 <= r <= 1
-    apply this after insert_previous_belief and flatten_conversation"""
+    apply this after flatten_conversation"""
     hb = HistoryBelief(data['turn'])
     n = round(r*len(hb.belief))
     mask_keys = random.sample(hb.belief.keys(), n)
@@ -64,7 +64,7 @@ def remove_repeating_masks(string):
 
 def mask_context_belief_entities(data):
     """masks entities in the context of the language modeling string if that entitiy appears as a belief
-    apply this after insert_previous_belief and flatten_conversation"""
+    apply this after flatten_conversation"""
     hb = HistoryBelief(data['turn'])
     values_or = ' | '.join(set(v for v in hb.belief.values() if v != 'not mentioned'))
     if values_or:
@@ -75,7 +75,7 @@ def mask_context_belief_entities(data):
 
 def random_mask_utterance(data, r):
     """randomly masks tokens in the context at proportion 0 <= r <= 1
-    apply this after insert_previous_belief and flatten_conversation"""
+    apply this after flatten_conversation"""
     hb = HistoryBelief(data['turn'])
     tokens = hb.context.strip().split(' ')
     content_idxs = [i for i, tok in enumerate(tokens) if tok != '<|system|>' and tok != '<|user|>']
