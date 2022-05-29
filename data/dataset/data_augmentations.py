@@ -34,10 +34,23 @@ def random_mask_beliefs(data, r):
     return {'masked': hb.text, 'target': data['turn']}
 
 
+def remove_repeating_masks(string):
+    tokens = string.split(' ')
+    repeated_mask_idxs = []
+    for i in range(1, len(tokens)):
+        if tokens[i] == 'MASK' and tokens[i-1] == 'MASK':
+            repeated_mask_idxs.append(i)
+    for i in sorted(repeated_mask_idxs, reverse=True):
+        del tokens[i]
+    return ' '.join(tokens)
+
+
 def mask_context_belief_entities(data):
     hb = HistoryBelief(data['turn'])
-    values_or = '|'.join(set(v for v in hb.belief.values() if v != 'not mentioned'))
-    hb.context = re.subn(values_or, 'MASK', hb.context)[0]
+    values_or = ' | '.join(set(v for v in hb.belief.values() if v != 'not mentioned'))
+    if values_or:
+        hb.context = re.subn(values_or, ' MASK ', hb.context)[0]
+        hb.context = ' ' + remove_repeating_masks(hb.context)
     return {'masked': hb.text, 'target': data['turn']}
 
 
@@ -59,5 +72,6 @@ def random_mask_utterance(data, r):
         idxs = random.sample(range(len(tokens)), n)
     for i in idxs:
         tokens[i] = 'MASK'
-    hb.context = ' ' + ' '.join(tokens)
+    hb.context = ' '.join(tokens)
+    hb.context = ' ' + remove_repeating_masks(hb.context)
     return {'masked': hb.text, 'target': data['turn']}
