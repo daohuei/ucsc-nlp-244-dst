@@ -6,6 +6,8 @@ from .multiwoz_dataset import HistoryBelief
 
 
 def insert_previous_belief(data):
+    """insert previous turn's belief into language model text
+    apply this method before flatten_conversation and use batch=False"""
     processed = [HistoryBelief(data['text'][0]).text]
     for text_1, text_2 in pairwise(data['text']):
         hb1, hb2 = HistoryBelief(text_1), HistoryBelief(text_2)
@@ -15,6 +17,8 @@ def insert_previous_belief(data):
 
 
 def flatten_conversation(data):
+    """flattens the dataset so that every turn is one example
+    use batch=True for this"""
     turns = []
     conversation_ids = []
     turn_numbers = []
@@ -27,6 +31,8 @@ def flatten_conversation(data):
 
 
 def mask_delta_beliefs(data):
+    """masks current belief values for a turn if it is different from the previous belief
+    apply this after insert_previous_belief and flatten_conversation"""
     hb = HistoryBelief(data['turn'])
     prev_belief = hb.prev_belief
     for key in prev_belief:
@@ -36,6 +42,8 @@ def mask_delta_beliefs(data):
 
 
 def random_mask_beliefs(data, r):
+    """randomly masks current belief values at proportion 0 <= r <= 1
+    apply this after insert_previous_belief and flatten_conversation"""
     hb = HistoryBelief(data['turn'])
     n = round(r*len(hb.belief))
     mask_keys = random.sample(hb.belief.keys(), n)
@@ -45,6 +53,7 @@ def random_mask_beliefs(data, r):
 
 
 def remove_repeating_masks(string):
+    """replaces contiguous masks with a single mask for text infilling"""
     tokens = string.split(' ')
     repeated_mask_idxs = []
     for i in range(1, len(tokens)):
@@ -56,6 +65,8 @@ def remove_repeating_masks(string):
 
 
 def mask_context_belief_entities(data):
+    """masks entities in the context of the language modeling string if that entitiy appears as a belief
+    apply this after insert_previous_belief and flatten_conversation"""
     hb = HistoryBelief(data['turn'])
     values_or = ' | '.join(set(v for v in hb.belief.values() if v != 'not mentioned'))
     if values_or:
@@ -65,6 +76,8 @@ def mask_context_belief_entities(data):
 
 
 def random_mask_utterance(data, r):
+    """randomly masks tokens in the context at proportion 0 <= r <= 1
+    apply this after insert_previous_belief and flatten_conversation"""
     hb = HistoryBelief(data['turn'])
     tokens = hb.context.strip().split(' ')
     content_idxs = [i for i, tok in enumerate(tokens) if tok != '<|system|>' and tok != '<|user|>']
