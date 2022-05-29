@@ -55,13 +55,11 @@ def random_mask_beliefs(data, r):
 def remove_repeating_masks(string):
     """replaces contiguous masks with a single mask for text infilling"""
     tokens = string.split(' ')
-    repeated_mask_idxs = []
-    for i in range(1, len(tokens)):
-        if tokens[i] == 'MASK' and tokens[i-1] == 'MASK':
-            repeated_mask_idxs.append(i)
-    for i in sorted(repeated_mask_idxs, reverse=True):
+    repeated_mask_idxs = [i for i, (tok1, tok2) in enumerate(pairwise(tokens), start=1) 
+                            if tok1 == 'MASK' and tok2 == 'MASK']
+    for i in repeated_mask_idxs[::-1]:
         del tokens[i]
-    return ' '.join(tokens)
+    return ' ' + ' '.join(tokens)
 
 
 def mask_context_belief_entities(data):
@@ -71,7 +69,7 @@ def mask_context_belief_entities(data):
     values_or = ' | '.join(set(v for v in hb.belief.values() if v != 'not mentioned'))
     if values_or:
         hb.context = re.subn(values_or, ' MASK ', hb.context)[0]
-        hb.context = ' ' + remove_repeating_masks(hb.context)
+        hb.context = remove_repeating_masks(hb.context)
     return {'masked': hb.text, 'target': data['turn']}
 
 
@@ -86,5 +84,5 @@ def random_mask_utterance(data, r):
     for i in mask_idxs:
         tokens[i] = 'MASK'
     hb.context = ' '.join(tokens)
-    hb.context = ' ' + remove_repeating_masks(hb.context)
+    hb.context = remove_repeating_masks(hb.context)
     return {'masked': hb.text, 'target': data['turn']}
