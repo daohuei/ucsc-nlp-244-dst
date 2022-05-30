@@ -4,6 +4,7 @@ import re
 
 from .multiwoz_dataset import HistoryBelief
 
+MASK_TOKEN = "<mask>"
 
 def insert_previous_belief(data):
     """insert previous turn's belief into language model text
@@ -37,7 +38,7 @@ def mask_delta_beliefs(data):
     prev_belief = hb.prev_belief
     for key in prev_belief:
         if hb.belief[key] != prev_belief[key]:
-            hb.belief[key] = 'MASK'
+            hb.belief[key] = MASK_TOKEN
     return {'masked': hb.text, 'target': data['turn']}
 
 
@@ -48,7 +49,7 @@ def random_mask_beliefs(data, r):
     n = round(r*len(hb.belief))
     mask_keys = random.sample(hb.belief.keys(), n)
     for key in mask_keys:
-        hb.belief[key] = 'MASK'
+        hb.belief[key] = MASK_TOKEN
     return {'masked': hb.text, 'target': data['turn']}
 
 
@@ -56,7 +57,7 @@ def remove_repeating_masks(string):
     """replaces contiguous masks with a single mask for text infilling"""
     tokens = string.split(' ')
     repeated_mask_idxs = [i for i, (tok1, tok2) in enumerate(pairwise(tokens), start=1) 
-                            if tok1 == 'MASK' and tok2 == 'MASK']
+                            if tok1 == MASK_TOKEN and tok2 == MASK_TOKEN]
     for i in repeated_mask_idxs[::-1]:
         del tokens[i]
     return ' ' + ' '.join(tokens) + ' '
@@ -68,7 +69,7 @@ def mask_context_belief_entities(data):
     hb = HistoryBelief(data['turn'])
     values_or = ' | '.join(set(v for v in hb.belief.values() if v != 'not mentioned'))
     if values_or:
-        hb.context = re.subn(values_or, ' MASK ', hb.context)[0]
+        hb.context = re.subn(values_or, f" {MASK_TOKEN} ", hb.context)[0]
         hb.context = remove_repeating_masks(hb.context)
     return {'masked': hb.text, 'target': data['turn']}
 
@@ -82,7 +83,7 @@ def random_mask_utterance(data, r):
     n = round(r*len(content_idxs))
     mask_idxs = random.sample(content_idxs, n)
     for i in mask_idxs:
-        tokens[i] = 'MASK'
+        tokens[i] = MASK_TOKEN
     hb.context = ' '.join(tokens)
     hb.context = remove_repeating_masks(hb.context)
     return {'masked': hb.text, 'target': data['turn']}
