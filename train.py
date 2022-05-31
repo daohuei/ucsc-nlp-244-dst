@@ -3,19 +3,13 @@ from pathlib import Path
 from transformers import (
     TrainingArguments,
     BartForConditionalGeneration,
-    default_data_collator,
+    DataCollatorForSeq2Seq,
 )
 from datasets import load_dataset, Split, Dataset
 
 from trainer.curriculum_trainer import CurriculumTrainer
-from data.dataset.tokenize import tokenization, tokenizer
-from data.dataset.data_augmentations import (
-    flatten_conversation,
-    mask_delta_beliefs,
-    random_mask_beliefs,
-    mask_context_belief_entities,
-    random_mask_utterance,
-)
+from data.dataset.tokenize import tokenizer, preprocess_func
+from data.dataset.data_augmentations import flatten_conversation
 from gpu import get_device
 from utils import print_stage
 
@@ -29,7 +23,7 @@ def test_compute_metrics(eval_predictions):
 def train():
     device, _ = get_device()
     name = "bart_finetune_cur"
-    BATCH_SIZE = 8
+    BATCH_SIZE = 4
     EPOCHS = 10
     data_dir = Path("resources/bart/")
 
@@ -48,101 +42,43 @@ def train():
         batched=True,
         remove_columns=dataset["train"].column_names,
     )
-    
-    print_stage("Masking Difference of Dialogue States")
-    masked_deltas = dataset["train"].map(
-        mask_delta_beliefs, remove_columns="turn"
-    )
-    masked_deltas = masked_deltas.map(
-        tokenization, batched=True, remove_columns=masked_deltas.column_names,
-    )
+    masked_deltas = load_dataset(
+        "json", data_files="resources/tokens/masked_deltas_token.json"
+    )["train"]
+    random_masked_beliefs_easy = load_dataset(
+        "json",
+        data_files="resources/tokens/random_masked_beliefs_easy_token.json",
+    )["train"]
+    random_masked_utterances_easy = load_dataset(
+        "json",
+        data_files="resources/tokens/random_masked_utterances_easy_token.json",
+    )["train"]
+    masked_context_belief_entities = load_dataset(
+        "json",
+        data_files="resources/tokens/masked_context_belief_entities_token.json",
+    )["train"]
+    random_masked_beliefs_hard = load_dataset(
+        "json",
+        data_files="resources/tokens/random_masked_beliefs_hard_token.json",
+    )["train"]
+    random_masked_utterances_hard = load_dataset(
+        "json",
+        data_files="resources/tokens/random_masked_utterances_hard_token.json",
+    )["train"]
 
-    print_stage("Masking Beliefs (Easy)")
-    random_masked_beliefs_easy = dataset["train"].map(
-        lambda d: random_mask_beliefs(d, 0.15), remove_columns="turn"
-    )
-    random_masked_beliefs_easy = random_masked_beliefs_easy.map(
-        tokenization,
-        batched=True,
-        remove_columns=random_masked_beliefs_easy.column_names,
-    )
-    
-    print_stage("Masking Utterances (Easy)")
-    random_masked_utterances_easy = dataset["train"].map(
-        lambda d: random_mask_utterance(d, 0.15), remove_columns="turn"
-    )
-    random_masked_utterances_easy = random_masked_utterances_easy.map(
-        tokenization,
-        batched=True,
-        remove_columns=random_masked_utterances_easy.column_names,
-    )
+    masked_beliefs_final_train = load_dataset(
+        "json",
+        data_files="resources/tokens/masked_beliefs_final_train_token.json",
+    ).map(preprocess_func, batched=True)["train"]
+    masked_beliefs_final_dev = load_dataset(
+        "json",
+        data_files="resources/tokens/masked_beliefs_final_dev_token.json",
+    ).map(preprocess_func, batched=True)["train"]
+    masked_beliefs_final_test = load_dataset(
+        "json",
+        data_files="resources/tokens/masked_beliefs_final_test_token.json",
+    ).map(preprocess_func, batched=True)["train"]
 
-    print_stage("Masking Belief Entities in the Context")
-    masked_context_belief_entities = dataset["train"].map(
-        mask_context_belief_entities, remove_columns="turn"
-    )
-    masked_context_belief_entities = masked_context_belief_entities.map(
-        tokenization,
-        batched=True,
-        remove_columns=masked_context_belief_entities.column_names,
-    )
-
-
-    print_stage("Masking Beliefs (Hard)")
-    random_masked_beliefs_hard = dataset["train"].map(
-        lambda d: random_mask_beliefs(d, 0.5), remove_columns="turn"
-    )
-    random_masked_beliefs_hard = random_masked_beliefs_hard.map(
-        tokenization,
-        batched=True,
-        remove_columns=random_masked_beliefs_hard.column_names,
-    )
-    
-    print_stage("Masking Utterances (Hard)")
-    random_masked_utterances_hard = dataset["train"].map(
-        lambda d: random_mask_utterance(d, 0.5), remove_columns="turn"
-    )
-    random_masked_utterances_hard = random_masked_utterances_hard.map(
-        tokenization,
-        batched=True,
-        remove_columns=random_masked_utterances_hard.column_names,
-    )
-
-    print_stage("Masking All Belief Values")
-    masked_beliefs_final = dataset.map(
-        lambda d: random_mask_beliefs(d, 1), remove_columns="turn"
-    )
-    masked_beliefs_final = masked_beliefs_final.map(
-        tokenization,
-        batched=True,
-        remove_columns=masked_beliefs_final.column_names,
-    )
-    # sample_dataset = Dataset.from_dict(masked_deltas["validation"][:2])
-    # sample_dataset_2 = Dataset.from_dict(random_masked_beliefs_easy["validation"][50:55])
-    # sample_dataset_3 = Dataset.from_dict(random_masked_utterances_easy["validation"][50:55])
-    # sample_dataset_4 = Dataset.from_dict(masked_context_belief_entities["validation"][50:55])
-
-    # train_set = sample_dataset.map(
-    #     tokenization, batched=True, remove_columns=sample_dataset.column_names
-    # )
-    # # , remove_columns='turn')
-    # train_set_2 = sample_dataset_2.map(
-    #     tokenization,
-    #     batched=True,
-    #     remove_columns=sample_dataset_2.column_names,
-    # )
-
-    # train_set_3 = sample_dataset_3.map(
-    #     tokenization,
-    #     batched=True,
-    #     remove_columns=sample_dataset_3.column_names,
-    # )
-
-    # train_set_4 = sample_dataset_4.map(
-    #     tokenization,
-    #     batched=True,
-    #     remove_columns=sample_dataset_4.column_names,
-    # )
     curriculum_datasets = [
         masked_deltas,
         random_masked_beliefs_easy,
@@ -170,18 +106,17 @@ def train():
         dataloader_num_workers=0,
         local_rank=-1,
         load_best_model_at_end=True,
-        # resume_from_checkpoint=f"{name}/checkpoint-19000",
     )
-    data_collator = default_data_collator
+    data_collator = DataCollatorForSeq2Seq(tokenizer)
+
     trainer = CurriculumTrainer(
         curriculum_datasets,
         model,
         args,
-        train_dataset=masked_beliefs_final["train"],
-        eval_dataset=masked_beliefs_final["validation"],
+        train_dataset=masked_beliefs_final_train,
+        eval_dataset=masked_beliefs_final_dev,
         data_collator=data_collator,
         # compute_metrics=test_compute_metrics
-        # callbacks=[MyCallback],  # We can either pass the callback class this way or an instance of it (MyCallback())
     )
     trainer.curriculum_train()
 
