@@ -8,10 +8,12 @@ from transformers import (
 from datasets import load_dataset, Split, Dataset
 
 from trainer.curriculum_trainer import CurriculumTrainer
+from trainer.curriculum_adapter_trainer import CurriculumAdapterTrainer
 from data.dataset.tokenize import tokenizer, preprocess_func
 from data.dataset.data_augmentations import flatten_conversation
 from gpu import get_device
 from utils import print_stage
+from config import NAME, BATCH_SIZE, EPOCHS, IS_ADAPTER, IS_CURRICULUM
 
 
 def test_compute_metrics(eval_predictions):
@@ -22,9 +24,7 @@ def test_compute_metrics(eval_predictions):
 
 def train():
     device, _ = get_device()
-    name = "bart_finetune_cur"
-    BATCH_SIZE = 4
-    EPOCHS = 10
+    name = NAME
     data_dir = Path("resources/bart/")
 
     data_files = {
@@ -79,14 +79,18 @@ def train():
         data_files="resources/tokens/masked_beliefs_final_test_token.json",
     ).map(preprocess_func, batched=True)["train"]
 
-    curriculum_datasets = [
-        masked_deltas,
-        random_masked_beliefs_easy,
-        random_masked_utterances_easy,
-        masked_context_belief_entities,
-        random_masked_beliefs_hard,
-        random_masked_utterances_hard,
-    ]
+    curriculum_datasets = (
+        [
+            masked_deltas,
+            random_masked_beliefs_easy,
+            random_masked_utterances_easy,
+            masked_context_belief_entities,
+            random_masked_beliefs_hard,
+            random_masked_utterances_hard,
+        ]
+        if IS_CURRICULUM
+        else []
+    )
 
     model = BartForConditionalGeneration.from_pretrained(
         "facebook/bart-base"
@@ -109,15 +113,35 @@ def train():
     )
     data_collator = DataCollatorForSeq2Seq(tokenizer)
 
-    trainer = CurriculumTrainer(
-        curriculum_datasets,
-        model,
-        args,
-        train_dataset=masked_beliefs_final_train,
-        eval_dataset=masked_beliefs_final_dev,
-        data_collator=data_collator,
-        # compute_metrics=test_compute_metrics
-    )
+    trainer = None
+    if IS_ADAPTER:
+        # Setup adapters# task adapter - only add if not existing
+        if "dst" not in model.config.adapters:
+            # add a new adapter
+            model.add_adapter("dst")
+        # Enable adapter training
+        model.train_adapter("dst")
+        model.set_active_adapters("dst")
+        trainer = CurriculumAdapterTrainer(
+            curriculum_datasets,
+            model,
+            args,
+            train_dataset=masked_beliefs_final_train,
+            eval_dataset=masked_beliefs_final_dev,
+            data_collator=data_collator,
+            # compute_metrics=test_compute_metrics
+        )
+    else:
+        trainer = CurriculumTrainer(
+            curriculum_datasets,
+            model,
+            args,
+            train_dataset=masked_beliefs_final_train,
+            eval_dataset=masked_beliefs_final_dev,
+            data_collator=data_collator,
+            # compute_metrics=test_compute_metrics
+        )
+
     trainer.curriculum_train()
 
 
