@@ -20,7 +20,7 @@ def postprocessing(ds):
     prediction = []
     for x in belief_list:
         not_mentioned = re.search("not mentioned", x)
-        if not_mentioned == None:
+        if not_mentioned == None and x.strip() and len(x.split()) > 2:
             prediction.append(x)
 
     return prediction

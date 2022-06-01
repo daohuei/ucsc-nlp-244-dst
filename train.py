@@ -43,40 +43,50 @@ def train():
         remove_columns=dataset["train"].column_names,
     )
     masked_deltas = load_dataset(
-        "json", data_files="resources/tokens/masked_deltas_token.json"
+        "json",
+        data_files="resources/tokens/masked_deltas_token.json",
+        download_mode="force_redownload",
     )["train"]
     random_masked_beliefs_easy = load_dataset(
         "json",
         data_files="resources/tokens/random_masked_beliefs_easy_token.json",
+        download_mode="force_redownload",
     )["train"]
     random_masked_utterances_easy = load_dataset(
         "json",
         data_files="resources/tokens/random_masked_utterances_easy_token.json",
+        download_mode="force_redownload",
     )["train"]
     masked_context_belief_entities = load_dataset(
         "json",
         data_files="resources/tokens/masked_context_belief_entities_token.json",
+        download_mode="force_redownload",
     )["train"]
     random_masked_beliefs_hard = load_dataset(
         "json",
         data_files="resources/tokens/random_masked_beliefs_hard_token.json",
+        download_mode="force_redownload",
     )["train"]
     random_masked_utterances_hard = load_dataset(
         "json",
         data_files="resources/tokens/random_masked_utterances_hard_token.json",
+        download_mode="force_redownload",
     )["train"]
 
     masked_beliefs_final_train = load_dataset(
         "json",
         data_files="resources/tokens/masked_beliefs_final_train_token.json",
+        download_mode="force_redownload",
     ).map(preprocess_func, batched=True)["train"]
     masked_beliefs_final_dev = load_dataset(
         "json",
         data_files="resources/tokens/masked_beliefs_final_dev_token.json",
+        download_mode="force_redownload",
     ).map(preprocess_func, batched=True)["train"]
     masked_beliefs_final_test = load_dataset(
         "json",
         data_files="resources/tokens/masked_beliefs_final_test_token.json",
+        download_mode="force_redownload",
     ).map(preprocess_func, batched=True)["train"]
 
     curriculum_datasets = (
@@ -99,7 +109,7 @@ def train():
 
     # setup trainer
     args = TrainingArguments(
-        output_dir=f"checkpoints/{name}",
+        output_dir=f"checkpoints/{name}/final",
         evaluation_strategy="epoch",
         save_strategy="epoch",
         learning_rate=2e-5,
@@ -120,10 +130,40 @@ def train():
             # add a new adapter
             model.add_adapter("dst")
         # Enable adapter training
-        model.train_adapter("dst")
-        model.set_active_adapters("dst")
+        # model.train_adapter("dst")
+        # model.set_active_adapters("dst")
+        adapter_name = model.load_adapter(
+            "checkpoints/bart_adapter_cur/course_5/checkpoint-14195/dst"
+        )
+        model.train_adapter(adapter_name)
+        model.set_active_adapters(adapter_name)
+        # for i, c_dataset in enumerate(curriculum_datasets):
+        #     c_args = TrainingArguments(
+        #         output_dir=f"checkpoints/{name}/course_{i}",
+        #         evaluation_strategy="epoch",
+        #         save_strategy="epoch",
+        #         learning_rate=2e-5,
+        #         per_device_train_batch_size=BATCH_SIZE,
+        #         per_device_eval_batch_size=BATCH_SIZE,
+        #         num_train_epochs=1,
+        #         weight_decay=0.01,
+        #         dataloader_num_workers=0,
+        #         local_rank=-1,
+        #     )
+        #     train_dataset = c_dataset.map(preprocess_func, batched=True)
+        #     c_trainer = CurriculumAdapterTrainer(
+        #         [],
+        #         model,
+        #         c_args,
+        #         train_dataset=train_dataset,
+        #         eval_dataset=masked_beliefs_final_dev,
+        #         data_collator=data_collator,
+        #         # compute_metrics=test_compute_metrics
+        #     )
+        #     c_trainer.train()
+
         trainer = CurriculumAdapterTrainer(
-            curriculum_datasets,
+            [],
             model,
             args,
             train_dataset=masked_beliefs_final_train,

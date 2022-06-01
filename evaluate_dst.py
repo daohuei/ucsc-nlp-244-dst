@@ -11,7 +11,7 @@ def get_slot_map(slot_triplet_str_list):
     for slot_triplet_str in slot_triplet_str_list:
         slot_triplets = slot_triplet_str.split()
         key = slot_triplets[0] + " " + slot_triplets[1]
-        val = slot_triplets[2]
+        val = slot_triplets[2:]
         if key not in SLOT_VALS:
             continue
         slot_map[key] = val
@@ -26,21 +26,25 @@ def get_unique_slot_map(preds, targets):
     for pred_str in preds:
         triplet = pred_str.split()
         key = triplet[0] + " " + triplet[1]
-        val = triplet[2]
+        val = triplet[2:]
+        if key not in SLOT_VALS:
+            continue
         pred_map[key] = val
         unique_slots.add(key)
 
     for target_str in targets:
         triplet = target_str.split()
         key = triplet[0] + " " + triplet[1]
-        val = triplet[2]
+        val = triplet[2:]
+        if key not in SLOT_VALS:
+            continue
         target_map[key] = val
         unique_slots.add(key)
 
     return unique_slots.copy(), pred_map.copy(), target_map.copy()
 
 
-def evaluate_dst(results):
+def evaluate_dst(input_results):
     num_turns = 0
     joint_acc = 0
     slot_acc = 0
@@ -50,6 +54,8 @@ def evaluate_dst(results):
     num_r_slots = 0
 
     clean_tokens = ["<s>", "</s>"]
+
+    results = input_results.copy()
 
     for dial in tqdm(results.keys()):
         dialogue_pred = results[dial]["generated_turn_belief"]
@@ -72,6 +78,7 @@ def evaluate_dst(results):
             turn_pred = new_turn_pred
 
             turn_pred, turn_target = ignore_none(turn_pred, turn_target)
+            # print(turn_pred, turn_target)
             turn_pred, turn_target = default_cleaning(turn_pred, turn_target)
 
             join_flag = False
@@ -116,4 +123,3 @@ def evaluate_dst(results):
         "slot_acc": slot_acc,
         "r_slot_acc": r_slot_acc,
     }
-
