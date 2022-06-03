@@ -1,15 +1,16 @@
-from lib2to3.pgen2.token import NAME
-
-
+"""
+    Modify it for configure the hyperparameters/experiment setup
+"""
 BATCH_SIZE = 4
-EPOCHS = 10
+EPOCHS = 100
 
-IS_ADAPTER = True
+IS_ADAPTER = False
 IS_CURRICULUM = True
 
 NAME = (
     "bart"
     + ("_adapter" if IS_ADAPTER else "_finetune")
-    + ("_cur" if IS_CURRICULUM else "")
+    + ("_cur_modified_courses" if IS_CURRICULUM else "")
+    + ("_no_cheat")
 )
 

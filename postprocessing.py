@@ -7,8 +7,13 @@ def postprocessing(ds):
     return prediction: valued prediction as list of triplet
     """
 
+    # remove the text after end of belief
+    eob_token = "<|endofbelief|>"
+    if eob_token in ds:
+        ds = ds[: ds.index(eob_token)] + eob_token
+
     current_belief = re.search("<\|belief\|> (.*) <\|endofbelief\|>", ds)
-    
+
     if not current_belief:
         return []
 
