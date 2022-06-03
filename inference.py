@@ -6,7 +6,6 @@ from tqdm.auto import tqdm
 from datasets import Dataset, load_dataset, Split
 from datasets import set_caching_enabled
 from transformers import (
-    default_data_collator,
     BartForConditionalGeneration,
     DataCollatorForSeq2Seq,
 )
@@ -16,7 +15,7 @@ from postprocessing import postprocessing
 from config import BATCH_SIZE
 from evaluate_dst import evaluate_dst
 from data.dataset.data_augmentations import flatten_conversation
-from data.dataset.tokenize import tokenizer
+from data.dataset.tokenize import tokenizer, preprocess_func
 from data.dataset.multiwoz_dataset import HistoryBelief, parse_raw_belief
 from gpu import get_device
 
@@ -87,7 +86,7 @@ def inference(model, inference_dataset, split="validation"):
     return results.copy(), pred_texts
 
 
-def preprocess_func(examples):
+def truncate_func(examples):
     examples["input_ids"] = torch.Tensor(
         [
             tokenizer.truncate_sequences(
@@ -126,7 +125,7 @@ def insert_prev_inference(model, inference_dataset, split="validation"):
             # update previous belief
             history_belief.prev_belief = parse_raw_belief(previous_belief_text)
         encoding = tokenizer(history_belief.text)
-        encoding = preprocess_func(encoding).to(device)
+        encoding = truncate_func(encoding).to(device)
         with torch.no_grad():
             output = model(**encoding)
 
@@ -170,7 +169,7 @@ def write_prediction(preds, name="baseline", split="dev"):
 
 if __name__ == "__main__":
     # set the name before you run the inference script
-    name = "bart_finetune_course_4_with_modified_inference"
+    name = "bart_finetune_modified_courses_no_cheat"
     masked_beliefs_final_dev = load_dataset(
         "json",
         data_files="resources/tokens/masked_beliefs_final_dev_token.json",
@@ -198,7 +197,8 @@ if __name__ == "__main__":
         # "facebook/bart-base"
         # "checkpoints/bart_finetune_cur/final/checkpoint-14195"
         # "checkpoints/bart_finetune/final/checkpoint-28390"
-        "checkpoints/bart_finetune_cur/course_4/checkpoint-14195"
+        # "checkpoints/bart_finetune_cur/course_4/checkpoint-14195"
+        "checkpoints/bart_finetune_modified_courses_no_cheat/final/checkpoint-42585"
     ).to(device)
     # model.resize_token_embeddings(len(tokenizer))
 
